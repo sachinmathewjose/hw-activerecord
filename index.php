@@ -83,14 +83,24 @@ class model {
             $statement->execute();
         }
         catch (Exception $exception) {
-            echo "Connection Error: ";// . $exception->getMessage();
+            echo "Connection Error: ". $exception->getMessage();
         }
     }
     public function insert() {
         $array = get_object_vars($this);
-        $columnString = implode('`,`', array_flip($array));
-        $valueString = ":".implode(',:', $array);
-        $sql = "INSERT INTO $this->tableName (`" . $columnString . "`) VALUES (" .$valueString."\")";
+        $count = 0;
+        $columnArrey;
+        $valueArrey;
+        foreach ($array as $key=>$value) {
+            if (isset($value) && $key!='tableName') {
+                $columnArrey[$count] = "`$key`";
+                $valueArrey[$count] = "\"$value\"";
+                $count++;
+            }
+        }
+        $columnString = implode(',', $columnArrey);
+        $valueString = implode(',', $valueArrey);
+        $sql = "INSERT INTO `$this->tableName` (" . $columnString . ") VALUES (" .$valueString.")";
         echo 'I just inserted a record' . $this->id . $sql;
         return $sql;
     }
@@ -100,25 +110,28 @@ class model {
         $updatevalue;
         $count = 0;
         foreach ($array as $key=>$value) {
-            if ($key != 'id') {
-                $updatevalue[$count] = "`$key` = $value";
+            if ($key != 'id' && $value!=NULL && $key!='tableName') {
+                $updatevalue[$count] = "`$key` = \"$value\"";
                 $count++;
             }
         }
         $updatestring = implode (',',$updatevalue);
-        $sql = "UPDATE $this->tableName SET ". $updatestring . " WHERE id=".$this->id;
+        $sql = "UPDATE `$this->tableName` SET ". $updatestring . " WHERE id=".$this->id;
         echo 'I just updated record:' . $this->id . $sql;
         return $sql;
     }
 
     public function delete() {
-
-        $db = dbConn::getConnection();
-        $tableName = get_called_class();
-        $sql = 'DELETE FROM ' . $tableName . ' WHERE id =' . $id;
-        $statement = $db->prepare($sql);
-        $statement->execute();
-        echo 'I just deleted record' . $this->id;
+        $sql = 'DELETE FROM `' . $this->tableName .'` WHERE `id` =' . $this->id;
+        echo 'I just deleted record' . $this->id. $sql;
+        try {
+            $db = dbConn::getConnection();
+            $statement = $db->prepare($sql);
+            $statement->execute();
+        }
+        catch (Exception $exception) {
+            echo "Connection Error: ". $exception->getMessage();
+        }
     }
 }
 
@@ -157,17 +170,14 @@ class todo extends model {
 //$records = accounts::findAll();
 
 //$records1 = todos::findAll();
-
-$records = accounts::findOne(3);
-$records->password = "12345678";
-$records->save();
-
+$records = todos::findOne(8);
+$records->delete();
 /*$record = new todo();
 $record->message = 'some task';
 $record->isdone = 0;
 $record->save();
-
-print_r($record);
-print_r($records);*/
+*/
+//print_r($record);
+//print_r($records);*/
 ?>
 
