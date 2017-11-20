@@ -2,66 +2,17 @@
 ini_set('display_errors','On');
 error_reporting(E_ALL);
 
-//definition for connection
-define('DATABASE', 'sj555');
-define('USERNAME', 'sj555');
-define('PASSWORD', 'mYSZqqZ9S');
-define('CONNECTION', 'sql2.njit.edu');
-
-class dbConn {
-    protected static $db;
-
-    private function __construct() {
-
-        try {
-            self::$db = new PDO( 'mysql:host='.CONNECTION.';dbname='.DATABASE,USERNAME,PASSWORD);
-            self::$db->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        }
-        catch (PDOException $exception) {
-            echo "Connection Error: " . $exception->getMessage();
-        }
-    }
-
-    static function getconnection() {
-        if(!self::$db) {
-            new dbConn();
-        }
-        return self::$db;
-    }
-}
-
-
-//class collection
-class collection
+//Class to load classes
+Class Manage 
 {
-    static public function findAll()
+    public static function autoload($class)
     {
-        $db = dbConn::getconnection();
-        $tablename = get_called_class();
-        $sql = 'SELECT * FROM ' . $tablename;
-        $statment = $db->prepare($sql);
-        $statment->execute();
-        $class = static::$modelName;
-        $statment->setFetchMode(PDO::FETCH_CLASS, $class);
-        $recordset = $statment->fetchAll();
-        return $recordset;
-    }
-
-    static public function findOne($id)
-    {
-
-        $db = dbConn::getConnection();
-        $tableName = get_called_class();
-        $sql = 'SELECT * FROM ' . $tableName . ' WHERE `id`=' . $id;
-        $statement = $db->prepare($sql);
-        $statement->execute();
-        $class = static::$modelName;
-        $statement->setFetchMode(PDO::FETCH_CLASS, $class);
-        $recordsSet = $statement->fetchAll();
-        return $recordsSet[0];
+        include 'class/'.$class.'.class.php';
     }
 }
 
+//register auto load function
+spl_autoload_register(array('Manage','autoload'));
 class accounts extends collection {
         protected static $modelName = 'account';
 }
@@ -69,76 +20,10 @@ class todos extends collection {
     protected static $modelName = 'todo';
 }
 
-class model {
-    protected $tableName;
-    public function save() {
-        if ($this->id == '') {
-            $sql = $this->insert();
-        } else {
-             $sql = $this->update();
-        }
-        try {
-            $db = dbConn::getConnection();
-            $statement = $db->prepare($sql);
-            $statement->execute();
-        }
-        catch (Exception $exception) {
-            echo "Connection Error: ". $exception->getMessage();
-        }
-    }
-    public function insert() {
-        $array = get_object_vars($this);
-        $count = 0;
-        $columnArrey;
-        $valueArrey;
-        foreach ($array as $key=>$value) {
-            if (isset($value) && $key!='tableName') {
-                $columnArrey[$count] = "`$key`";
-                $valueArrey[$count] = "\"$value\"";
-                $count++;
-            }
-        }
-        $columnString = implode(',', $columnArrey);
-        $valueString = implode(',', $valueArrey);
-        $sql = "INSERT INTO `$this->tableName` (" . $columnString . ") VALUES (" .$valueString.")";
-        echo 'I just inserted a record' . $this->id . $sql;
-        return $sql;
-    }
-
-    public function update() {
-        $array = get_object_vars($this);
-        $updatevalue;
-        $count = 0;
-        foreach ($array as $key=>$value) {
-            if ($key != 'id' && $value!=NULL && $key!='tableName') {
-                $updatevalue[$count] = "`$key` = \"$value\"";
-                $count++;
-            }
-        }
-        $updatestring = implode (',',$updatevalue);
-        $sql = "UPDATE `$this->tableName` SET ". $updatestring . " WHERE id=".$this->id;
-        echo 'I just updated record:' . $this->id . $sql;
-        return $sql;
-    }
-
-    public function delete() {
-        $sql = 'DELETE FROM `' . $this->tableName .'` WHERE `id` =' . $this->id;
-        echo 'I just deleted record' . $this->id. $sql;
-        try {
-            $db = dbConn::getConnection();
-            $statement = $db->prepare($sql);
-            $statement->execute();
-        }
-        catch (Exception $exception) {
-            echo "Connection Error: ". $exception->getMessage();
-        }
-    }
-}
-
 class account extends model {
     public $id;
     public $email;
-    public $fmane;
+    public $fname;
     public $lname;
     public $phone;
     public $birthday;
@@ -155,7 +40,7 @@ class todo extends model {
     public $id;
     public $owneremail;
     public $ownerid;
-    public $createdate;
+    public $createddate;
     public $duedate;
     public $message;
     public $isdone;
@@ -166,18 +51,92 @@ class todo extends model {
     }
 }
 
+$obj = new main();
+//main class
+class main
+{
+    public function __construct()
+    {
+        $html = '';
+        $html .= '<html><head><link rel="stylesheet" type="text/css" href="style.css"></head><body>';
+        $html .= '<h1>Hw- Active record</h1><br>Printing the TODO table';
+        $html .= '<hr><hr>';
 
-//$records = accounts::findAll();
 
-//$records1 = todos::findAll();
-$records = todos::findOne(8);
-$records->delete();
-/*$record = new todo();
-$record->message = 'some task';
-$record->isdone = 0;
-$record->save();
-*/
-//print_r($record);
-//print_r($records);*/
+        //TODO table
+        $html .= '<h2>Select One Record</h2>';
+        $table = todos::findOne(1);
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '<h2>Select all Record</h2>';
+        $table = todos::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '<h2>Insert a record</h2>';
+        $html .= "";
+        $record = todos::create();
+        $record->message = 'Created a new todo for testing';
+        $record->isdone = 0;
+        $html .= "todos-> message:$record->message  isdone:$record->isdone";
+        $id = $record->save();
+        $table = todos::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '<h2>Update a record</h2>';
+        $record = todos::findOne($id)[0];
+        $record ->isdone = 1;
+        $record ->save();
+        $html .= "todos-> isdone:$record->isdone";
+        $table = todos::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '<h2>Delete a record</h2>';
+        $record = todos::findOne($id)[0];
+        $record ->delete();
+        $html .= "Deleted the record : id= $id";
+        $table = todos::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        //ACCOUNTs table
+        $html .= '<br><br><br>Printing the ACCOUNT table';
+        $html .= '<hr><hr>';
+        $html .= '<h2>Select One Record</h2>';
+        $table = accounts::findOne(2);
+        $html .= tablecreate::htmltable_assarrey($table);
+        $html .= '<h2>Select all Record</h2>';
+        $table = accounts::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '<h2>Insert a record</h2>';
+        $html .= "";
+        $record = accounts::create();
+        $record->fname = 'example name';
+        $record->email = 'exapmle@example.com';
+        $record->password = '12345';
+        $html .= "accounts-> fname:$record->fname, email:$$record->email, password:$record->password";
+        $id = $record->save();
+        $table = accounts::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '<h2>Update a record</h2>';
+        $record = accounts::findOne($id)[0];
+        $record->password = '987654321';
+        $record ->save();
+        $html .= "accounts-> password:$record->password";
+        $table = accounts::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '<h2>Delete a record</h2>';
+        $record = accounts::findOne($id)[0];
+        $record ->delete();
+        $html .= "Deleted the record : id= $id";
+        $table = accounts::findAll();
+        $html .= tablecreate::htmltable_assarrey($table);
+
+        $html .= '</body>';
+        echo $html;
+    }
+}
+
 ?>
 
